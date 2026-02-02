@@ -1,98 +1,162 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Job Scheduler Microservice
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+This project is a simple **job scheduler microservice** built as part of a backend technical assessment.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+The main goal of the service is to allow creating scheduled jobs, storing their execution state in a database, and running them automatically based on a defined interval.
 
-## Description
+The actual job execution logic is intentionally kept **dummy** (for example, logging to the console), as the focus of this task is on system design, scheduling, and backend structure rather than business logic.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+---
 
-## Project setup
+## 🚀 Tech Stack
 
-```bash
-$ npm install
+- **Language:** TypeScript  
+- **Framework:** NestJS  
+- **Database:** PostgreSQL  
+- **ORM:** TypeORM  
+- **Testing:** Jest (End-to-End tests)
+
+---
+
+## 🧠 High-Level Design
+
+- Jobs are created through REST APIs and stored in the database
+- Each job contains scheduling metadata such as interval and execution timestamps
+- A background scheduler runs using a **polling approach**
+- The database acts as the **single source of truth**
+- No external scheduling libraries are used
+
+---
+
+## 📦 Features
+
+- Create scheduled jobs with custom payloads
+- List jobs with pagination and optional filtering
+- Retrieve job details by ID
+- Background job execution based on scheduling metadata
+- End-to-end testing covering API, database, and scheduler behavior
+
+---
+
+## 🗄️ Job Model (Simplified)
+
+Each job contains the following fields:
+
+- `id` (UUID)
+- `name`
+- `intervalInSeconds`
+- `payload` (JSON)
+- `status` (ACTIVE / PAUSED)
+- `lastRunAt`
+- `nextRunAt`
+- `createdAt`
+- `updatedAt`
+
+---
+
+## 🔌 API Endpoints
+
+### ➕ Create Job
+**POST** `/api/v1/jobs`
+
+Example request body:
+```json
+{
+  "name": "email-job",
+  "intervalInSeconds": 10,
+  "payload": {
+    "type": "email",
+    "to": "user@test.com"
+  }
+}
 ```
 
-## Compile and run the project
+### 📄 List Jobs
+**GET** `/api/v1/jobs?page=1&limit=10&status=ACTIVE`
 
+Supports pagination and optional status filtering.
+
+### 🔍 Get Job by ID
+**GET** `/api/v1/jobs/:id`
+
+The job ID is validated as a UUID.
+
+---
+
+## ⏱️ Scheduler Logic
+
+- A background scheduler runs every 5 seconds
+- It queries the database for jobs that:
+  - Are marked as `ACTIVE`
+  - Have `nextRunAt` less than or equal to the current time
+- Each due job is executed using dummy logic
+- After execution:
+  - `lastRunAt` is updated
+  - `nextRunAt` is recalculated based on the job interval
+
+This approach keeps the scheduler:
+- Simple
+- Database-driven
+- Safe across application restarts
+
+---
+
+## 🧪 Testing
+
+The project includes an End-to-End (E2E) test that verifies:
+- Creating a job through the API
+- Persisting the job in the database
+- Executing the job through the scheduler
+- Updating execution timestamps
+
+To keep the tests deterministic and avoid timing issues:
+- The scheduler does not auto-run in test mode
+- Jobs are manually marked as due inside the test
+- The scheduler is triggered explicitly during the test
+
+**Run E2E tests:**
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+set NODE_ENV=test && npm run test:e2e
 ```
 
-## Run tests
+---
 
-```bash
-# unit tests
-$ npm run test
+## ⚙️ Running the Project Locally
 
-# e2e tests
-$ npm run test:e2e
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-# test coverage
-$ npm run test:cov
-```
+2. **Create environment file:**
+   ```bash
+   cp .env.example .env
+   ```
 
-## Deployment
+3. **Run database migrations:**
+   ```bash
+   npm run migration:run
+   ```
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+4. **Start the application:**
+   ```bash
+   npm run start:dev
+   ```
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+The service will be available at: `http://localhost:3000/api/v1`
 
-```bash
-$ npm install -g mau
-$ mau deploy
-```
+---
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## 📈 Scalability Notes
 
-## Resources
+This service is designed with scalability in mind:
 
-Check out a few resources that may come in handy when working with NestJS:
+- The database is used as the single source of truth for scheduling
+- Polling allows the service to run safely across multiple instances
+- API endpoints use pagination and query limits to protect the database
+- The service can scale horizontally by running multiple instances
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+**Future improvements could include:**
+- Distributed locking to avoid duplicate job execution
+- Separating the scheduler into its own service
+- Optimizing polling frequency dynamically
