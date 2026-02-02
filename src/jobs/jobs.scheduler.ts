@@ -13,12 +13,14 @@ export class JobsScheduler {
         @InjectRepository(JobEntity)
         private readonly jobRepository: Repository<JobEntity>,
     ) {
-        // نشغّل الـ scheduler أول ما الـ provider يتعمل
-        this.start();
+        // نشغّل الـ scheduler تلقائيًا في غير بيئة test
+        if (process.env.NODE_ENV !== 'test') {
+            this.start();
+        }
     }
 
     /**
-     * Starts the scheduler loop.
+     * Starts the scheduler loop (polling).
      */
     private start() {
         setInterval(() => {
@@ -28,11 +30,11 @@ export class JobsScheduler {
 
     /**
      * Finds and executes due jobs.
+     * 👈 خليتها public عشان نقدر نناديها في الـ E2E Test
      */
-    private async runDueJobs(): Promise<void> {
+    async runDueJobs(): Promise<void> {
         const now = new Date();
 
-        // 1️⃣ نجيب الـ jobs اللي وقتها جه
         const dueJobs = await this.jobRepository.find({
             where: {
                 status: JobStatus.ACTIVE,
@@ -40,7 +42,6 @@ export class JobsScheduler {
             },
         });
 
-        // 2️⃣ نشغّل كل job
         for (const job of dueJobs) {
             await this.executeJob(job);
         }
@@ -55,9 +56,11 @@ export class JobsScheduler {
         const now = new Date();
 
         // Dummy execution
-        console.log(`Executing job "${job.name}" with payload:`, job.payload);
+        console.log(
+            `Executing job "${job.name}" with payload:`,
+            job.payload,
+        );
 
-        // 3️⃣ نحدّث التوقيتات
         job.lastRunAt = now;
         job.nextRunAt = new Date(
             now.getTime() + job.intervalInSeconds * 1000,
